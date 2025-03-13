@@ -1,0 +1,83 @@
+%pip install ultralytics  # install
+from ultralytics import YOLO, checks, hub
+checks()  # checks
+
+# Login to HUB using your API key (https://hub.ultralytics.com/settings?tab=api+keys)
+hub.login("cdf43d82a5e0aa18cd4172c2d888ac26d1852d844e")
+# Load your model from HUB (replace 'YOUR_MODEL_ID' with your model ID)
+model = YOLO("https://hub.ultralytics.com/models/fFJDvcQGibOkalDmD7bI")
+# Train the model
+results = model.train()
+
+!pip install -q git+https://github.com/ultralytics/ultralytics.git
+
+!pip install -q roboflow
+
+from roboflow import Roboflow
+rf = Roboflow(api_key="dD0JlparXtCw0l1Ks7k7")
+project = rf.workspace("brain-mri").project("mri-rskcu")
+version = project.version(3)
+dataset = version.download("yolov11")
+
+!yolo task=detect train model=/content/yolo11n.pt data='/content/MRI-3/data.yaml' epochs=25 batch=32 imgsz=512 plots=True cache=True save_json=True
+
+from ultralytics import YOLO
+model_path = "/content/runs/detect/train/weights/best.pt"
+model = YOLO(model_path)
+result = model.predict(source="/content/MRI-3/train/images", conf=0.25, save=True)
+
+# Import necessary libraries
+import glob
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+# Fetch the list of images from the specified directory
+image_paths = glob.glob("/content/runs/detect/predict/*.jpg")
+# Select only the first 10 images to display
+selected_images = image_paths[:12]
+# Set up a 2x5 grid for displaying the images
+fig, axes = plt.subplots(2, 6, figsize=(20, 12))
+# Iterate over the grid and populate it with the selected images
+for idx, ax in enumerate(axes.flat):
+    if idx < len(selected_images):
+        image = mpimg.imread(selected_images[idx])  # Read image
+        ax.imshow(image)                            # Display image
+        ax.axis('off')                              # Hide axes
+    else:
+        ax.axis('off')                              # Hide unused axes
+# Adjust layout to prevent overlap
+plt.tight_layout()
+# Display the grid of images
+plt.show()
+
+result = model.predict(source="/content/MRI-3/valid/images/Tr-glTr_0000_jpg.rf.ee4ad3ca5d0eafd1f482988b89457634.jpg", imgsz=640, conf=0.25)
+annotated_img = result[0].plot()
+annotated_img[:, :, ::-1]
+
+# Import necessary libraries
+import cv2
+import numpy as np
+# Predict on a single image and retrieve results
+result = model.predict(source="/content/MRI-3/valid/images/Tr-glTr_0000_jpg.rf.ee4ad3ca5d0eafd1f482988b89457634.jpg", imgsz=640, conf=0.25)
+annotated_img = result[0].plot()
+# Loop through each detected tumor area
+for detection in result[0].boxes:
+    # Extract bounding box coordinates (x_min, y_min, x_max, y_max)
+    x_min, y_min, x_max, y_max = map(int, detection.xyxy[0])  # Convert coordinates to integer
+    # Crop the detected tumor area from the image
+    detected_area = annotated_img[y_min:y_max, x_min:x_max]
+    # Convert the detected area to grayscale
+    gray_area = cv2.cvtColor(detected_area, cv2.COLOR_BGR2GRAY)
+    # Apply a pseudo-color map to the grayscale area
+    pseudo_colored_area = cv2.applyColorMap(gray_area, cv2.COLORMAP_JET)
+    # Overlay the pseudo-colored area onto the original image
+    annotated_img[y_min:y_max, x_min:x_max] = cv2.addWeighted(detected_area, 0.5, pseudo_colored_area, 0.5, 0)
+# Display the final image with pseudo-colored detected tumor areas
+plt.imshow(cv2.cvtColor(annotated_img, cv2.COLOR_BGR2RGB))
+plt.axis('off')
+plt.show()
+
+result = model.predict(source="/content/MRI-3/train/images/y203_jpg.rf.bf7fa56e2370df3a9625aa5d2b65da51.jpg", imgsz=640, conf=0.25)
+annotated_img = result[0].plot()
+annotated_img[:, :, ::-1]
+
+i="/content/MRI-3/train/images/k016_jpg.rf.6ab3f65a5d931818d6bcf02391cf5476.jpg"
